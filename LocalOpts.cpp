@@ -16,57 +16,28 @@ using namespace llvm;
 bool runOnBasicBlock(BasicBlock &B) {
     llvm::LLVMContext context;
     for(auto &I : B){ 
-    
-    // Preleviamo le prime due istruzioni del BB
     	if(I.getNextNode()!=nullptr){
 	    Instruction &Inst1st = I, &Inst2nd = *(I.getNextNode());
-
-	        // L'indirizzo della prima istruzione deve essere uguale a quello del 
-        	// primo operando della seconda istruzione (per costruzione dell'esempio)
-       	 assert(&Inst1st == Inst2nd.getOperand(0));
-
-       	 // Stampa la prima istruzione
-       	 outs() << "PRIMA ISTRUZIONE: " << Inst1st << "\n";
-       	 // Stampa la prima istruzione come operando
-       	 outs() << "COME OPERANDO: ";
-       	 Inst1st.printAsOperand(outs(), false);
-       	 outs() << "\n";
-         int i=1;
-         if(Inst1st.getOpcode() == Instruction::Mul){
-	    for(auto *Iter = Inst1st.op_begin(); Iter != Inst1st.op_end(); ++Iter){
+	    int i=1; //tengo conto della posizione del registro virtuale
+	    if(Inst1st.getOpcode() == Instruction::Mul){
+	        for(auto *Iter = Inst1st.op_begin(); Iter != Inst1st.op_end(); ++Iter){
 		    Value *Op = *Iter;
 		    if(ConstantInt *C = dyn_cast<ConstantInt>(Op)){
 			    if(C->getValue().isPowerOf2()){
 				    auto val = C->getValue().exactLogBase2();
 				    APInt app(32, val);
 				    ConstantInt *CC = ConstantInt::get(Inst1st.getOperand(i)->getType()->getContext(), app);
-				    if(Inst1st.getOperand(i)->getType() == CC->getType()){
-				      Instruction *ShiftInst = BinaryOperator::Create(Instruction::Shl, Inst1st.getOperand(i), CC);
-            			      ShiftInst->insertAfter(&Inst1st);
-	            		      Inst1st.replaceAllUsesWith(ShiftInst);
-	            		      }
-            			    else {
-            			          Inst1st.getOperand(i)->getType()->print(outs());
-            			          outs() << " ";
-            			          CC->getType()->print(outs());
-            			          outs() << "\n";
-            			          }
-			    }
-		    }
+				    Instruction *ShiftInst = BinaryOperator::Create(Instruction::Shl, Inst1st.getOperand(i), CC);
+				    ShiftInst->insertAfter(&Inst1st);
+				    Inst1st.replaceAllUsesWith(ShiftInst);
+	            	    }
+		     }
 		    i--;
-	    }
+	          }
 
-         }
-        // Manipolazione delle istruzioni
-       /*Instruction *NewInst = BinaryOperator::Create(
-            Instruction::Add, Inst1st.getOperand(0), Inst1st.getOperand(0));
-
-        NewInst->insertAfter(&Inst1st);
-        // Si possono aggiornare le singole references separatamente?
-        // Controlla la documentazione e prova a rispondere.
-        Inst1st.replaceAllUsesWith(NewInst);*/
-    }//endif
-  }
+             }
+        }
+    }
     return true;
 }
 
