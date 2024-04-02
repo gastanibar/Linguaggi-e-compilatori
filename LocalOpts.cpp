@@ -14,7 +14,6 @@
 using namespace llvm;
 
 bool runOnBasicBlock(BasicBlock &B) {
-    llvm::LLVMContext context;
     for(auto &I : B){ 
     	if(I.getNextNode()!=nullptr){
 	    Instruction &Inst1st = I, &Inst2nd = *(I.getNextNode());
