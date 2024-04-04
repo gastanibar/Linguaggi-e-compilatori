@@ -13,8 +13,48 @@
 #include <llvm/IR/Constants.h>
 using namespace llvm;
 
+bool multiInstructionOptimization(BasicBlock &B) {
+  for(auto &I : B) {
+    if(I.getNextNode() != nullptr) {
+      Instruction &Inst = I;
+      unsigned int opcode = -1;
+      ConstantInt *value = nullptr;
+      Value *var = nullptr;
+
+      if(Inst.getOpcode() == Instruction::Add) opcode=Instruction::Sub;
+      if(Inst.getOpcode() == Instruction::Sub) opcode=Instruction::Add;
+
+      int i = 1;
+      for(auto *Iter = Inst.op_begin(); Iter != Inst.op_end(); ++Iter) {
+        if(ConstantInt *C = dyn_cast<ConstantInt>(Iter)) {
+          value = C;
+          var = Inst.getOperand(i);
+        }
+        i--;
+      }
+
+      for(unsigned int j=0; j<Inst.getNumSuccessors(); j++) {
+        Instruction InstJ = Inst.getSuccessor(j);
+        if(Inst == InstJ) break;
+        if(InstJ.getOpcode() == opcode) {
+          for(auto *Iter = InstJ.op_begin(); Iter != InstJ.op_end(); ++Iter) {
+            if(ConstantInt *C = dyn_cast<ConstantInt>(Iter)) {
+              if(C != value) break;
+              APInt app(32, 0);
+              ConstantInt *CC = ConstantInt::get(value->getType()->getContext(), app);
+              Instruction *TempInst = BinaryOperator::Create(Instruction::Add, var, CC);
+              TempInst->insertAfter(&InstJ);
+              InstJ.replaceAllUsesWith(TempInst);
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
 bool runOnBasicBlock(BasicBlock &B) {
-    for(auto &I : B){ 
+    for(auto &I : B){
     	if(I.getNextNode()!=nullptr){
 	    Instruction &Inst1st = I, &Inst2nd = *(I.getNextNode());
 	    int i=1; //tengo conto della posizione del registro virtuale
@@ -48,6 +88,7 @@ bool runOnFunction(Function &F) {
     if (runOnBasicBlock(*Iter)) {
       Transformed = true;
     }
+    multiInstructionOptimization(*Iter);
   }
 
   return Transformed;
