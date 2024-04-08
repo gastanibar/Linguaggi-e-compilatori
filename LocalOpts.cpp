@@ -11,6 +11,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include <cmath>
+
 // L'include seguente va in LocalOpts.h
 #include <llvm/IR/Constants.h>
 using namespace llvm;
@@ -74,7 +75,6 @@ bool algebraicIdentity(Instruction &Inst1st, bool add){
   }
   return false;
 }
-
 bool runOnBasicBlock(BasicBlock &B) {
     for(auto &Inst1st : B){ 
         //prima di tutto cerco di ottimizzare una Algebraic Identity
