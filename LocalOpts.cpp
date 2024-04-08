@@ -10,9 +10,13 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/IRBuilder.h"
+#include <cmath>
+
 // L'include seguente va in LocalOpts.h
 #include <llvm/IR/Constants.h>
 using namespace llvm;
+//Dichiarazione della funzione
+int is_Near_Power_Of_Two(int num);
 
 void strengthReduction(Instruction &Inst1st, bool mul){
   int i=1;
@@ -20,18 +24,35 @@ void strengthReduction(Instruction &Inst1st, bool mul){
   for(auto *Iter = Inst1st.op_begin(); Iter != Inst1st.op_end(); ++Iter){
         Value *Op = *Iter;
         if(ConstantInt *C = dyn_cast<ConstantInt>(Op)){
-            if(C->getValue().isPowerOf2()){
-              auto val = C->getValue().exactLogBase2();
-              APInt app(32, val);
-              ConstantInt *CC = ConstantInt::get(Inst1st.getOperand(i)->getType()->getContext(), app);
-              if(mul)
-                ShiftInst = BinaryOperator::Create(Instruction::Shl, Inst1st.getOperand(i), CC);
-              else 
-                ShiftInst = BinaryOperator::Create(Instruction::AShr, Inst1st.getOperand(i), CC);
-              ShiftInst->insertAfter(&Inst1st);
-              Inst1st.replaceAllUsesWith(ShiftInst);
-            }
-        }
+            if (mul)
+		{ int val=is_Near_Power_Of_Two(C->getValue().getSExtValue());
+		  if(val != -1)	{
+                    APInt app(32, val);
+                    ConstantInt *CC = ConstantInt::get(Inst1st.getOperand(i)->getType()->getContext(), app);
+                    ShiftInst = BinaryOperator::Create(Instruction::Shl, Inst1st.getOperand(i), CC);
+		    ShiftInst->insertAfter(&Inst1st);
+		    if (C->getValue().getSExtValue() < pow(2, val)) {
+                        Instruction *SubInst = BinaryOperator::Create(Instruction::Sub, ShiftInst, Inst1st.getOperand(i));
+                        SubInst->insertAfter(ShiftInst);
+			Inst1st.replaceAllUsesWith(SubInst);
+                    }       
+                    else if (C->getValue().getSExtValue() > pow(2, val)) {
+                        Instruction *AddInst = BinaryOperator::Create(Instruction::Add, ShiftInst, Inst1st.getOperand(i));
+                        AddInst->insertAfter(ShiftInst);
+			Inst1st.replaceAllUsesWith(AddInst);
+                    } 
+		    else
+			    Inst1st.replaceAllUsesWith(ShiftInst);
+            }}
+            else
+                if(C->getValue().isPowerOf2()){
+                    auto val = C->getValue().exactLogBase2();
+                    APInt app(32, val);
+                    ConstantInt *CC = ConstantInt::get(Inst1st.getOperand(i)->getType()->getContext(), app);
+                    ShiftInst = BinaryOperator::Create(Instruction::AShr, Inst1st.getOperand(i), CC);
+            	    ShiftInst->insertAfter(&Inst1st);
+            	    Inst1st.replaceAllUsesWith(ShiftInst);
+            }}
         i--;
   }
 }
@@ -54,7 +75,6 @@ bool algebraicIdentity(Instruction &Inst1st, bool add){
   }
   return false;
 }
-
 bool runOnBasicBlock(BasicBlock &B) {
     for(auto &Inst1st : B){ 
         //prima di tutto cerco di ottimizzare una Algebraic Identity
@@ -80,7 +100,6 @@ bool runOnFunction(Function &F) {
       Transformed = true;
     }
   }
-
   return Transformed;
 }
 
@@ -94,3 +113,21 @@ PreservedAnalyses LocalOpts::run(Module &M,
   return PreservedAnalyses::all();
 }
 
+
+
+
+int is_Near_Power_Of_Two(int num) {
+//Con un numero negativo o nullo non è possibile fare nulla
+    if (num <= 0) {
+        return -1;
+    } 
+    double log2num = log2(num); //logaritmo del numero
+    int nearestPower = round(log2num); //intero più vicino, ossia l'esponente più vicino
+    int nearestPowerValue = pow(2, nearestPower); //valore della potenza più vicina
+
+    if (abs(nearestPowerValue - num) <= 1) { //controllo che sia effettivamente "vicino"
+        return nearestPower;
+    } else {
+        return -1;
+    }
+}
