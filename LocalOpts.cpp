@@ -18,6 +18,73 @@ using namespace llvm;
 //Dichiarazione della funzione
 int is_Near_Power_Of_Two(int num);
 
+bool multiInstructionOptimization(BasicBlock &B) {
+  for(auto &I : B) {
+    Instruction &Inst = I;
+//    outs() << "---------------\n";
+    if(Inst.getOpcode() == 17) return false;
+    if(Inst.getNextNode() != nullptr) {
+      unsigned int opcode = -1;
+      ConstantInt *value = nullptr;
+      Value *var = nullptr;
+
+      if(Inst.getOpcode() == Instruction::Add) opcode=Instruction::Sub;
+      if(Inst.getOpcode() == Instruction::Sub) opcode=Instruction::Add;
+//      outs() << "#####: tipo di operazione " << Inst.getOpcode() << " \n";
+//      outs() << "#####: operazione cercata " << opcode << " \n";
+      int i = 1;
+      for(auto *Iter = Inst.op_begin(); Iter != Inst.op_end(); ++Iter) {
+        if(ConstantInt *C = dyn_cast<ConstantInt>(Iter)) {
+          value = C;
+          var = Inst.getOperand(i);
+        }
+        i--;
+      }
+//      outs() << "#####: valore constante " << value->getValue() << " \n";
+      for(User *U : Inst.users()) {
+        Instruction *InstJ = dyn_cast<Instruction>(U);
+//        outs() << "\n#####: cast " << InstJ << " \n";
+        if(! (InstJ) ) break;
+//        outs() << "#####: operazione " << InstJ->getOpcode() << " \n";
+        if(InstJ->getOpcode() == opcode) {
+//          outs() << "#####: operazione trovata \n";
+          for(auto *Iter = InstJ->op_begin(); Iter != InstJ->op_end(); ++Iter) {
+            if(ConstantInt *C = dyn_cast<ConstantInt>(Iter)) {
+              if(C != value) break;
+              APInt app(32, 0);
+              ConstantInt *CC = ConstantInt::get(value->getType()->getContext(), app);
+              Instruction *TempInst = BinaryOperator::Create(Instruction::Add, var, CC);
+              TempInst->insertAfter(InstJ);
+              InstJ->replaceAllUsesWith(TempInst);
+            }
+          }
+         }
+        }
+       }
+      }
+  return true;
+}
+
+bool algebraicIdentity(Instruction &Inst1st, bool add){
+  int i=1;
+  for(auto *Iter = Inst1st.op_begin(); Iter != Inst1st.op_end(); ++Iter){
+      Value *Op = *Iter;
+      if(ConstantInt *C = dyn_cast<ConstantInt>(Op)){
+        if((C->getValue() == 0 && add) || (C->getValue() == 1 && !add)){
+            Instruction &Inst2st = *(Inst1st.getNextNode());
+            AllocaInst *ptr = new AllocaInst(Inst1st.getOperand(i)->getType(),0, "", &Inst2st);
+            StoreInst *storeInst = new StoreInst(Inst1st.getOperand(i), ptr, &Inst2st);
+            LoadInst *loadInst = new LoadInst(Inst1st.getOperand(i)->getType(), ptr, "", &Inst2st);
+            Inst1st.replaceAllUsesWith(loadInst);
+            return true;
+
+        }
+      }
+      i--;
+  }
+  return false;
+}
+
 void strengthReduction(Instruction &Inst1st, bool mul){
   int i=1;
   Instruction *ShiftInst;
@@ -57,25 +124,8 @@ void strengthReduction(Instruction &Inst1st, bool mul){
   }
 }
 
-bool algebraicIdentity(Instruction &Inst1st, bool add){
-  int i=1;
-  for(auto *Iter = Inst1st.op_begin(); Iter != Inst1st.op_end(); ++Iter){
-      Value *Op = *Iter;
-      if(ConstantInt *C = dyn_cast<ConstantInt>(Op)){
-        if((C->getValue() == 0 && add) || (C->getValue() == 1 && !add)){
-            Instruction &Inst2st = *(Inst1st.getNextNode());
-            AllocaInst *ptr = new AllocaInst(Inst1st.getOperand(i)->getType(),0, "", &Inst2st);
-            StoreInst *storeInst = new StoreInst(Inst1st.getOperand(i), ptr, &Inst2st);
-            LoadInst *loadInst = new LoadInst(Inst1st.getOperand(i)->getType(), ptr, "", &Inst2st);
-            Inst1st.replaceAllUsesWith(loadInst);
-            return true;
-        }
-      }
-      i--;
-  }
-  return false;
-}
 bool runOnBasicBlock(BasicBlock &B) {
+    multiInstructionOptimization(*B);
     for(auto &Inst1st : B){ 
         //prima di tutto cerco di ottimizzare una Algebraic Identity
         if(Inst1st.getOpcode() == Instruction::Add)
