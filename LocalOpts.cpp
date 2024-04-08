@@ -21,7 +21,6 @@ int is_Near_Power_Of_Two(int num);
 bool multiInstructionOptimization(BasicBlock &B) {
   for(auto &I : B) {
     Instruction &Inst = I;
-//    outs() << "---------------\n";
     if(Inst.getOpcode() == 17) return false;
     if(Inst.getNextNode() != nullptr) {
       unsigned int opcode = -1;
@@ -30,8 +29,6 @@ bool multiInstructionOptimization(BasicBlock &B) {
 
       if(Inst.getOpcode() == Instruction::Add) opcode=Instruction::Sub;
       if(Inst.getOpcode() == Instruction::Sub) opcode=Instruction::Add;
-//      outs() << "#####: tipo di operazione " << Inst.getOpcode() << " \n";
-//      outs() << "#####: operazione cercata " << opcode << " \n";
       int i = 1;
       for(auto *Iter = Inst.op_begin(); Iter != Inst.op_end(); ++Iter) {
         if(ConstantInt *C = dyn_cast<ConstantInt>(Iter)) {
@@ -40,14 +37,10 @@ bool multiInstructionOptimization(BasicBlock &B) {
         }
         i--;
       }
-//      outs() << "#####: valore constante " << value->getValue() << " \n";
       for(User *U : Inst.users()) {
         Instruction *InstJ = dyn_cast<Instruction>(U);
-//        outs() << "\n#####: cast " << InstJ << " \n";
         if(! (InstJ) ) break;
-//        outs() << "#####: operazione " << InstJ->getOpcode() << " \n";
         if(InstJ->getOpcode() == opcode) {
-//          outs() << "#####: operazione trovata \n";
           for(auto *Iter = InstJ->op_begin(); Iter != InstJ->op_end(); ++Iter) {
             if(ConstantInt *C = dyn_cast<ConstantInt>(Iter)) {
               if(C != value) break;
