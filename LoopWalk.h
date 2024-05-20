@@ -6,7 +6,7 @@
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 namespace llvm {
-        class LoopAss : public PassInfoMixin<LoopAss> {
+        class LoopWalk : public PassInfoMixin<LoopWalk> {
                public : PreservedAnalyses run(Loop &L, LoopAnalysisManager &LAM,
 						LoopStandardAnalysisResults &LAR,
 						LPMUpdater &LU);
