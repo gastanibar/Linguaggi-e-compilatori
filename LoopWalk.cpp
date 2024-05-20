@@ -99,7 +99,7 @@ bool dependenciesMoved(Instruction* I, const std::vector<Instruction*>& candidat
     return true;  // Le istruzioni di ogni operando sono state trovate nel vettore, quindi ritorno true
 }
 
-PreservedAnalyses LoopAss::run(Loop &L, LoopAnalysisManager &LAM, LoopStandardAnalysisResults &LAR, LPMUpdater &LU) {
+PreservedAnalyses LoopWalk::run(Loop &L, LoopAnalysisManager &LAM, LoopStandardAnalysisResults &LAR, LPMUpdater &LU) {
 	std::vector <Instruction*> invariantInstructions; // = new vector<Instruction>();
 	for (auto BI = L.block_begin(); BI != L.block_end(); ++BI) {
 		BasicBlock* BB = *BI;
